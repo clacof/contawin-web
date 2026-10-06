@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import { redirect } from "next/navigation";
-import { Icono } from "@/components/Icono";
+import paisaje from "@/assets/contawin-paisaje.jpg";
 import { config } from "@/lib/config";
 import { getSesion, leerIntentos } from "@/lib/sesion";
 import FormLogin from "./FormLogin";
@@ -13,8 +14,10 @@ export default async function PaginaLogin() {
   return (
     <main className="login-fondo">
       <section className="login-marca" aria-label="ContaWin">
+        <Image src={paisaje} alt="" priority placeholder="blur" sizes="(max-width: 860px) 100vw, 50vw" className="login-paisaje" />
         <div className="fila" style={{ gap: 12 }}>
-          <div className="logo" aria-hidden="true"><Icono nombre="comprobante" tam={22} /></div>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img className="logo" src="/marca/contawin-marca.svg" alt="" width={44} height={44} />
           <strong style={{ fontSize: 18 }}>ContaWin</strong>
         </div>
         <div className="columna" style={{ gap: 14 }}>

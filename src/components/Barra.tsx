@@ -54,7 +54,8 @@ export function Marco({ ctx, children }: { ctx: Contexto; children: React.ReactN
     <div className={`app ${menu ? "menu-abierto" : ""}`}>
       <nav className="barra no-imprimir" aria-label="Módulos" id="menu-principal">
         <div className="barra-marca">
-          <div className="logo" aria-hidden="true"><Icono nombre="comprobante" tam={18} /></div>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img className="logo" src="/marca/contawin-marca.svg" alt="" width={30} height={30} />
           <div><strong>ContaWin</strong><span>Sistema de Contabilidad</span></div>
         </div>
         <div className="barra-lista">
