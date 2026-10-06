@@ -33,8 +33,13 @@ function claveSecreta(): Uint8Array {
       s = fs.readFileSync(archivo, "utf-8").trim();
     } catch {
       s = crypto.randomBytes(48).toString("base64url");
-      fs.mkdirSync(path.dirname(archivo), { recursive: true });
-      fs.writeFileSync(archivo, s, { mode: 0o600 });
+      try {
+        fs.mkdirSync(path.dirname(archivo), { recursive: true });
+        fs.writeFileSync(archivo, s, { mode: 0o600 });
+      } catch {
+        // sin disco donde guardarla (p. ej. en Vercel): cada servidor tendría otra clave y las sesiones fallarían
+        throw new Error("Falta la variable de entorno CONTAWIN_SECRET (mínimo 32 caracteres).");
+      }
     }
   }
   secreto = new TextEncoder().encode(s);
@@ -97,13 +102,13 @@ export interface Sesion {
 export const getSesion = cache(async (): Promise<Sesion | null> => {
   const d = await verificar<DatosSesion>((await cookies()).get(COOKIE_SESION)?.value);
   if (!d?.u) return null;
-  const db = getDb();
-  const u = db.usuario(d.u);
+  const db = await getDb();
+  const u = await db.usuario(d.u);
   if (!u) return null;
   const { clave_hash: _omitida, ...usuario } = u;
   void _omitida;
-  let empresa = d.e ? db.empresa(d.e) ?? null : null;
-  let periodo = empresa && d.p ? db.periodo(d.p) ?? null : null;
+  let empresa = d.e ? (await db.empresa(d.e)) ?? null : null;
+  let periodo = empresa && d.p ? (await db.periodo(d.p)) ?? null : null;
   if (periodo && periodo.empresa_id !== empresa!.id) periodo = null;
   if (!periodo) empresa = null;           // sin año no hay empresa de trabajo
   return {

@@ -7,13 +7,13 @@ import * as util from "@/lib/util";
 
 export async function previaApertura(origenId: number, cuenta: string | null) {
   await requiereUsuario();
-  const db = getDb();
+  const db = await getDb();
   try {
-    return { lineas: db.lineasApertura(origenId, cuenta), falta: false };
+    return { lineas: await db.lineasApertura(origenId, cuenta), falta: false };
   } catch (e) {
     if (!(esErrorDatos(e))) throw e;
     // falta la cuenta del resultado: muestra solo los saldos
-    const sc = db.saldosCierre(origenId);
+    const sc = await db.saldosCierre(origenId);
     return {
       lineas: Object.keys(sc.saldos).sort().map((c) => ({ codigo: c, debe: Math.max(sc.saldos[c], 0), haber: Math.max(-sc.saldos[c], 0) })),
       falta: true,
@@ -24,10 +24,10 @@ export async function previaApertura(origenId: number, cuenta: string | null) {
 /** Año existente (Ingresos > Asiento de apertura): genera o regenera la apertura del año de trabajo. */
 export async function traspasar(origenId: number, cuenta: string | null): Promise<{ error?: string; mensaje?: string }> {
   const s = await requiereEmpresa();
-  const db = getDb();
+  const db = await getDb();
   try {
-    const aid = db.traspasarApertura(origenId, s.periodoId, cuenta);
-    const a = db.asiento(aid)!;
+    const aid = await db.traspasarApertura(origenId, s.periodoId, cuenta);
+    const a = (await db.asiento(aid))!;
     return { mensaje: `Asiento de apertura N° ${a.numero} guardado (${util.fmtPesos(a.debe)}).` };
   } catch (e) {
     if (esErrorDatos(e)) return { error: e.message };
@@ -39,11 +39,11 @@ export async function traspasar(origenId: number, cuenta: string | null): Promis
 export async function crearAnoConApertura(empresaId: number, ano: number, origenId: number, cuenta: string | null, omitir: boolean)
   : Promise<{ error?: string; pid?: number; mensaje?: string }> {
   await requiereUsuario();
-  const db = getDb();
+  const db = await getDb();
   try {
-    if (omitir) return { pid: db.crearPeriodo(empresaId, ano) };
-    const pid = db.crearPeriodoConApertura(empresaId, ano, origenId, cuenta);
-    const a = db.asientoApertura(pid);
+    if (omitir) return { pid: await db.crearPeriodo(empresaId, ano) };
+    const pid = await db.crearPeriodoConApertura(empresaId, ano, origenId, cuenta);
+    const a = await db.asientoApertura(pid);
     return { pid, mensaje: a ? `Año ${ano} creado con el asiento de apertura N° ${a.numero} (${util.fmtPesos(a.debe)}).` : undefined };
   } catch (e) {
     if (esErrorDatos(e)) return { error: e.message };

@@ -14,7 +14,7 @@ export default async function Pagina() {
       <section className="tarjeta columna" style={{ gap: 12, maxWidth: 760 }}>
         <p>ContaWin es obra de <strong>Claudio A. Cofré V.</strong>, escrito originalmente en xHarbour/FiveWin.</p>
         <p className="secundario">Esta es su versión web (Next.js + SQLite), traspasada desde ContaWinPy conservando sus reglas contables.</p>
-        <p className="ayuda">Base de datos:<br /><code>{getDb().ruta}</code></p>
+        <p className="ayuda">Base de datos:<br /><code>{(await getDb()).ruta}</code></p>
       </section>
     </>
   );

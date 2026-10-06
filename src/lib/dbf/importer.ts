@@ -58,8 +58,8 @@ export function anosDisponibles(carpetaEmpresa: string, encoding: Codificacion =
  * Importa todas las empresas encontradas en la carpeta raíz de ContaWin.
  * encoding: cp1252 (ContaWin Windows) o cp850 (datos de la versión DOS).
  */
-export function importar(raiz: string, db: Database, reemplazar = false, progreso?: (t: string) => void,
-  encoding: Codificacion = "cp1252"): Resultado {
+export async function importar(raiz: string, db: Database, reemplazar = false, progreso?: (t: string) => void,
+  encoding: Codificacion = "cp1252"): Promise<Resultado> {
   const res = new Resultado();
   if (!buscarArchivo(raiz, "EMPRESA.DBF")) throw new Error(`No se encontró EMPRESA.DBF en:\n${raiz}`);
   const empresas = leer(raiz, "EMPRESA.DBF", encoding);
@@ -70,21 +70,21 @@ export function importar(raiz: string, db: Database, reemplazar = false, progres
     const nombre = S(e.RAZONSOC);
     if (!rut) { res.avisos.push(`Empresa sin RUT omitida: ${nombre}`); continue; }
     progreso?.(`Importando ${nombre} ...`);
-    const existente = db.empresaPorRut(rut);
+    const existente = await db.empresaPorRut(rut);
     if (existente) {
       if (!reemplazar) {
         res.omitidas++;
         res.avisos.push(`${nombre}: ya existe en la base (RUT ${util.formatoRut(rut)}), no se importó.`);
         continue;
       }
-      db.borrarEmpresa(existente.id);
+      await db.borrarEmpresa(existente.id);
     }
 
     const carpeta = directorio ? buscarCarpeta(raiz, directorio) : null;
     if (!carpeta) res.avisos.push(`${nombre}: no se encontró la carpeta '${directorio}'; se importa solo la ficha.`);
 
-    db.transaccion((c) => {
-      const empId = c.execute(
+    await db.transaccion(async (c) => {
+      const empId = await c.execute(
         "INSERT INTO empresa(rut,razon_social,giro,direccion,ciudad,rep_legal,sucursal," +
         "honorarios,directorio,impuestos) VALUES (?,?,?,?,?,?,?,?,?,?)",
         [rut, nombre, S(e.GIRO), S(e.DIRECCION), S(e.CIUDAD), S(e.REPLEGAL), S(e.SUCURSAL), I(e.HONORARIOS),
@@ -98,7 +98,7 @@ export function importar(raiz: string, db: Database, reemplazar = false, progres
         const cod = S(r.CODIGO).toUpperCase();
         if (!cod || vistos.has(cod)) continue;
         vistos.add(cod);
-        c.execute("INSERT INTO cuenta(empresa_id,codigo,nombre,cdocum) VALUES (?,?,?,?)",
+        await c.execute("INSERT INTO cuenta(empresa_id,codigo,nombre,cdocum) VALUES (?,?,?,?)",
           [empId, cod, S(r.NOMBRE), I(r.CDOCUM) === 1 ? 1 : 0]);
         res.cuentas++;
       }
@@ -109,14 +109,14 @@ export function importar(raiz: string, db: Database, reemplazar = false, progres
         const cod = S(r.CODIGO).toUpperCase();
         if (!cod || vistos.has(cod)) continue;
         vistos.add(cod);
-        c.execute("INSERT INTO ccosto(empresa_id,codigo,nombre) VALUES (?,?,?)", [empId, cod, S(r.NOMBRE)]);
+        await c.execute("INSERT INTO ccosto(empresa_id,codigo,nombre) VALUES (?,?,?)", [empId, cod, S(r.NOMBRE)]);
         res.ccostos++;
       }
 
       // --- años
       const proveedores = new Map<string, Registro>();
       for (const ano of anosDisponibles(carpeta, encoding)) {
-        const perId = c.execute("INSERT INTO periodo(empresa_id,ano) VALUES (?,?)", [empId, ano]);
+        const perId = await c.execute("INSERT INTO periodo(empresa_id,ano) VALUES (?,?)", [empId, ano]);
         res.periodos++;
         const cy = buscarCarpeta(carpeta, `TRA${String(ano).padStart(4, "0")}`);
         if (!cy) continue;
@@ -137,7 +137,7 @@ export function importar(raiz: string, db: Database, reemplazar = false, progres
           }
           const tipo = S(r.TIPO).toUpperCase() || "T";
           const fecha = util.toIso(r.FECHA as string);
-          const aid = c.execute(
+          const aid = await c.execute(
             "INSERT INTO asiento(periodo_id,numero,tipo,fecha,glosa,debe,haber,cdcosto) VALUES (?,?,?,?,?,?,?,?)",
             [perId, num, tipo, fecha, S(r.GLOSA), I(r.DEBE), I(r.HABER), S(r.CDCOSTO).toUpperCase()]);
           idPorNumero.set(num, aid);
@@ -157,7 +157,7 @@ export function importar(raiz: string, db: Database, reemplazar = false, progres
           const debe = I(r.DEBE), haber = I(r.HABER);
           if (!lineasPorAsiento.has(num)) lineasPorAsiento.set(num, []);
           const nLinea = lineasPorAsiento.get(num)!.length + 1;
-          const did = c.execute("INSERT INTO detalle(asiento_id,linea,codigo,debe,haber,fecha) VALUES (?,?,?,?,?,?)",
+          const did = await c.execute("INSERT INTO detalle(asiento_id,linea,codigo,debe,haber,fecha) VALUES (?,?,?,?,?,?)",
             [aid, nLinea, cod, debe, haber, util.toIso(r.FECHA as string) || (fechaPorNumero.get(num) ?? null)]);
           lineasPorAsiento.get(num)!.push([did, cod]);
           const s = sumas.get(num) ?? [0, 0];
@@ -170,7 +170,7 @@ export function importar(raiz: string, db: Database, reemplazar = false, progres
           const [d, h] = sumas.get(num) ?? [0, 0];
           if (d !== h)
             res.avisos.push(`${nombre} ${ano}: asiento N° ${num} descuadrado (debe ${util.fmtMonto(d)} / haber ${util.fmtMonto(h)}).`);
-          c.execute("UPDATE asiento SET debe=?, haber=? WHERE id=?", [d, h, aid]);
+          await c.execute("UPDATE asiento SET debe=?, haber=? WHERE id=?", [d, h, aid]);
         }
 
         // compras (ligadas a la línea con la misma cuenta, como el SEEK numero+cuenta original)
@@ -186,7 +186,7 @@ export function importar(raiz: string, db: Database, reemplazar = false, progres
           const did = candidatos[0];
           usados.add(did);
           const td = I(r.TDOCUM) || 1;
-          c.execute(
+          await c.execute(
             "INSERT INTO compra(detalle_id,tdocum,fecha_doc,numero_doc,rut_prov,neto,iva,adicional," +
             "total,cdcosto,detalle,fecha_pago) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
             [did, td, util.toIso(r.FECHAD as string), I(r.NUMEROC), util.limpiarRut(String(r.RPROVEE ?? "")),
@@ -197,7 +197,7 @@ export function importar(raiz: string, db: Database, reemplazar = false, progres
       }
 
       for (const [rp, r] of proveedores) {
-        c.execute("INSERT INTO proveedor(empresa_id,rut,nombre,direccion,ciudad,giro,telefono,email) VALUES (?,?,?,?,?,?,?,?)",
+        await c.execute("INSERT INTO proveedor(empresa_id,rut,nombre,direccion,ciudad,giro,telefono,email) VALUES (?,?,?,?,?,?,?,?)",
           [empId, rp, S(r.NOMBRE), S(r.DIRECC), S(r.CIUDAD), S(r.GIRO), S(r.TELEFONO), S(r.EMAIL)]);
         res.proveedores++;
       }

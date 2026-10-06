@@ -10,7 +10,7 @@ export const runtime = "nodejs";
 
 export async function GET() {
   if (!(await getSesion())) return new Response("No autorizado", { status: 401 });
-  const db = getDb();
+  const db = await getDb();
   const nombre = nombreRespaldo(db.ruta);
   const tmp = path.join(fs.mkdtempSync(path.join(os.tmpdir(), "contawin-")), nombre);
   try {

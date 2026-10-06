@@ -10,7 +10,7 @@ export const metadata: Metadata = { title: "Asiento de apertura" };
 /** AperturaDialog: vista previa de los saldos del balance del año anterior y cuenta que recibe el resultado. */
 export default async function PaginaApertura({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   const q = await searchParams;
-  const db = getDb();
+  const db = await getDb();
   const crear = !!(q.empresa && q.ano);
   let empresaId: number, anoDestino: number, periodoDestinoId: number | null = null;
   if (crear) {
@@ -23,8 +23,8 @@ export default async function PaginaApertura({ searchParams }: { searchParams: P
     anoDestino = s.ano;
     periodoDestinoId = s.periodoId;
   }
-  const emp = db.empresa(empresaId);
-  const origen = emp ? db.periodoAnterior(empresaId, anoDestino) : undefined;
+  const emp = await db.empresa(empresaId);
+  const origen = emp ? await db.periodoAnterior(empresaId, anoDestino) : undefined;
   if (!emp || !origen) {
     return (
       <div className="columna" style={{ gap: 20 }}>
@@ -34,13 +34,13 @@ export default async function PaginaApertura({ searchParams }: { searchParams: P
       </div>
     );
   }
-  const sc = db.saldosCierre(origen.id);
-  const cuentas = db.cuentas(empresaId);
-  const descuadrados = db.cantidadDescuadrados(origen.id);
+  const sc = await db.saldosCierre(origen.id);
+  const cuentas = await db.cuentas(empresaId);
+  const descuadrados = await db.cantidadDescuadrados(origen.id);
   const avisos: string[] = [];
   if (descuadrados)
     avisos.push(`⚠ El año ${origen.ano} tiene ${descuadrados} comprobante(s) descuadrado(s); corrígelos o la apertura no cuadrará.`);
-  const previo = periodoDestinoId ? db.asientoApertura(periodoDestinoId) : undefined;
+  const previo = periodoDestinoId ? await db.asientoApertura(periodoDestinoId) : undefined;
   if (previo) avisos.push(`Se reemplazará el asiento de apertura N° ${previo.numero} ya existente.`);
   return (
     <AperturaForm
@@ -48,7 +48,7 @@ export default async function PaginaApertura({ searchParams }: { searchParams: P
       crear={crear} avisos={avisos} resultado={sc.resultado} resumen={resumenResultado(sc.resultado)}
       nombres={Object.fromEntries(cuentas.map((c) => [c.codigo, c.nombre]))}
       cuentasPatrimonio={cuentas.filter((c) => !["3", "4"].includes(c.codigo.slice(0, 1))).map((c) => [c.codigo, c.nombre] as const)}
-      sugerida={db.cuentaResultadoSugerida(empresaId)}
+      sugerida={await db.cuentaResultadoSugerida(empresaId)}
     />
   );
 }

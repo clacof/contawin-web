@@ -14,7 +14,7 @@ export default async function Pagina() {
         subtitulo="Guarda una copia de seguridad de todos los datos (empresas, años, asientos, compras y usuarios)." />
       <section className="tarjeta columna" style={{ gap: 16 }}>
         <div><a className="boton primario" href="/api/respaldo"><Icono nombre="respaldar" />Descargar respaldo</a></div>
-        <div className="alerta-info"><Icono nombre="info" /><span>Para restaurarlo, detenga el sistema y copie el archivo sobre:<br /><code>{getDb().ruta}</code></span></div>
+        <div className="alerta-info"><Icono nombre="info" /><span>Para restaurarlo, detenga el sistema y copie el archivo sobre:<br /><code>{(await getDb()).ruta}</code></span></div>
       </section>
     </>
   );

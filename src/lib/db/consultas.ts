@@ -8,7 +8,7 @@ export interface Movimiento {
 }
 
 export class ConsultasRepo extends AperturaRepo {
-  movimientos(periodoId: number, codigo: string | null = null, desde: util.FechaEntrada = null, hasta: util.FechaEntrada = null): Movimiento[] {
+  movimientos(periodoId: number, codigo: string | null = null, desde: util.FechaEntrada = null, hasta: util.FechaEntrada = null): Promise<Movimiento[]> {
     const sql = [`SELECT d.codigo, d.debe, d.haber, a.fecha, a.numero, a.glosa, a.tipo
                   FROM detalle d JOIN asiento a ON a.id=d.asiento_id WHERE a.periodo_id=?`];
     const p: unknown[] = [periodoId];
@@ -19,7 +19,7 @@ export class ConsultasRepo extends AperturaRepo {
     return this.q(sql.join(" "), p);
   }
 
-  compras(periodoId: number, desde: util.FechaEntrada = null, hasta: util.FechaEntrada = null, cdcosto: string | null = null): MovimientoCompra[] {
+  compras(periodoId: number, desde: util.FechaEntrada = null, hasta: util.FechaEntrada = null, cdcosto: string | null = null): Promise<MovimientoCompra[]> {
     const sql = [`SELECT c.*, a.numero nasiento, a.fecha fecha_asiento, d.codigo ccuenta
                   FROM compra c JOIN detalle d ON d.id=c.detalle_id
                   JOIN asiento a ON a.id=d.asiento_id WHERE a.periodo_id=?`];
@@ -31,8 +31,8 @@ export class ConsultasRepo extends AperturaRepo {
     return this.q(sql.join(" "), p);
   }
 
-  rangoFechasCompras(periodoId: number): [string | null, string | null] {
-    const r = this.q1<{ d: string | null; h: string | null }>(`SELECT MIN(c.fecha_doc) d, MAX(c.fecha_doc) h FROM compra c
+  async rangoFechasCompras(periodoId: number): Promise<[string | null, string | null]> {
+    const r = await this.q1<{ d: string | null; h: string | null }>(`SELECT MIN(c.fecha_doc) d, MAX(c.fecha_doc) h FROM compra c
                        JOIN detalle d ON d.id=c.detalle_id JOIN asiento a ON a.id=d.asiento_id
                        WHERE a.periodo_id=?`, [periodoId]);
     return r && r.d ? [util.fromIso(r.d), util.fromIso(r.h)] : [null, null];

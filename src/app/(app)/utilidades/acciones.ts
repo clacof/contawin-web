@@ -18,7 +18,7 @@ export async function importarDbf(carpeta: string, reemplazar: boolean): Promise
   if (reemplazar) await guardarSesion({ u: s.usuario.usuario });       // la empresa de trabajo puede ser reemplazada
   let resumen: string;
   try {
-    resumen = importar(ruta, getDb(), reemplazar).resumen();
+    resumen = (await importar(ruta, await getDb(), reemplazar)).resumen();
   } catch (e) {
     return { error: `No se pudo importar:\n${(e as Error).message}` };
   }

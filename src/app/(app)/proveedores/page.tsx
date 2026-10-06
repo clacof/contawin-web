@@ -9,7 +9,7 @@ export const metadata: Metadata = { title: "Proveedores" };
 export default async function Pagina({ searchParams }: { searchParams: Promise<{ orden?: string }> }) {
   const s = await requiereEmpresa();
   const orden = (await searchParams).orden === "nombre" ? "nombre" : "rut";
-  const lista = getDb().proveedores(s.empresaId, orden);
+  const lista = await (await getDb()).proveedores(s.empresaId, orden);
   return (
     <Cliente subtitulo={s.empresa.razon_social} orden={orden}
       proveedores={lista.map(({ empresa_id: _e, ...p }) => p)}

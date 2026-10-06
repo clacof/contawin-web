@@ -9,7 +9,7 @@ export const metadata: Metadata = { title: "Seleccionar empresa" };
 export default async function PaginaSeleccionar({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   const s = await requiereUsuario();
   const q = await searchParams;
-  const empresas = getDb().empresas();
+  const empresas = await (await getDb()).empresas();
   return (
     <Seleccion
       aviso={q.aviso === "empresa" ? "Primero debes seleccionar una empresa.\n\nUsa «Cambiar empresa» o presiona F2." : undefined}

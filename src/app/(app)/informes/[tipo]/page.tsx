@@ -22,9 +22,10 @@ export default async function PaginaInforme({ params, searchParams }: {
   const cfg = INFORMES[tipo as TipoInforme] as { titulo: string; sinDesde?: boolean; tipo?: boolean; cuentas?: boolean; ccosto?: boolean };
   const s = await requiereEmpresa();
   const q = await searchParams;
-  const db = getDb();
-  const [d, h] = tipo === "libro-compras" ? db.rangoFechasCompras(s.periodoId) : db.rangoFechas(s.periodoId);
-  const cuentas = cfg.cuentas ? db.cuentas(s.empresaId).map((c) => [c.codigo, c.nombre] as [string, string]) : [];
+  const db = await getDb();
+  const [d, h] = tipo === "libro-compras" ? await db.rangoFechasCompras(s.periodoId) : await db.rangoFechas(s.periodoId);
+  const cuentas = cfg.cuentas ? (await db.cuentas(s.empresaId)).map((c) => [c.codigo, c.nombre] as [string, string]) : [];
+  const ccostos = cfg.ccosto ? (await db.ccostos(s.empresaId)).map((c) => [c.codigo, c.nombre] as [string, string]) : [];
   const valores = {
     desde: q.desde ?? d ?? `${s.ano}-01-01`, hasta: q.hasta ?? h ?? `${s.ano}-12-31`, emision: q.emision ?? util.hoyIso(),
     tipo: q.tipo ?? "I", cdesde: q.cdesde ?? cuentas[0]?.[0] ?? "", chasta: q.chasta ?? cuentas.at(-1)?.[0] ?? "", cc: q.cc ?? TODOS_CC,
@@ -34,7 +35,7 @@ export default async function PaginaInforme({ params, searchParams }: {
   let error: string | undefined;
   let sinDatos = false;
   if (q.ver === "1") {
-    const r = generar(s, tipo, q);
+    const r = await generar(s, tipo, q);
     if ("error" in r) error = r.error;
     else if (!reports.tieneDatos(r.informe)) sinDatos = true;
     else {
@@ -49,7 +50,7 @@ export default async function PaginaInforme({ params, searchParams }: {
   return (
     <>
       <Parametros titulo={cfg.titulo} subtitulo={`${s.empresa.razon_social} · Año ${s.ano}`} cfg={cfg} valores={valores}
-        cuentas={cuentas} ccostos={cfg.ccosto ? db.ccostos(s.empresaId).map((c) => [c.codigo, c.nombre] as [string, string]) : []}
+        cuentas={cuentas} ccostos={ccostos}
         error={error} sinDatos={sinDatos} />
       {visor}
     </>

@@ -18,11 +18,16 @@ if (!args.length) {
   process.exit(1);
 }
 const rutaDb = args[1] ?? config.rutaBase;
-const db = new Database(rutaDb);
-try {
-  const res = importar(args[0], db, reemplazar, (t) => console.log(t), encoding);
-  console.log("\n" + res.resumen());
-  console.log(`\nBase de datos: ${rutaDb}`);
-} finally {
-  db.close();
+
+async function main() {
+  const db = await Database.abrir(`file:${rutaDb}`);
+  try {
+    const res = await importar(args[0], db, reemplazar, (t) => console.log(t), encoding);
+    console.log("\n" + res.resumen());
+    console.log(`\nBase de datos: ${rutaDb}`);
+  } finally {
+    db.close();
+  }
 }
+
+void main();

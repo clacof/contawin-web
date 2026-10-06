@@ -11,12 +11,12 @@ export function netoIvaTotal(c: { neto: number; iva: number; total: number; adic
 }
 
 /** cdcosto=null -> todos los centros de costo (cada uno con su subtotal). */
-export function libroCompras(db: Database, empresaId: number, periodoId: number, desde: util.FechaEntrada,
-  hasta: util.FechaEntrada, cdcosto: string | null = null, emision: string | null = null): Informe {
-  const emp = db.empresa(empresaId);
-  const compras = db.compras(periodoId, desde, hasta, cdcosto);
-  const proveedores = Object.fromEntries(db.proveedores(empresaId).map((p) => [p.rut, p.nombre]));
-  const ccostos = Object.fromEntries(db.ccostos(empresaId).map((c) => [c.codigo, c.nombre]));
+export async function libroCompras(db: Database, empresaId: number, periodoId: number, desde: util.FechaEntrada,
+  hasta: util.FechaEntrada, cdcosto: string | null = null, emision: string | null = null): Promise<Informe> {
+  const emp = await db.empresa(empresaId);
+  const compras = await db.compras(periodoId, desde, hasta, cdcosto);
+  const proveedores = Object.fromEntries((await db.proveedores(empresaId)).map((p) => [p.rut, p.nombre]));
+  const ccostos = Object.fromEntries((await db.ccostos(empresaId)).map((c) => [c.codigo, c.nombre]));
   const inf = informe({
     titulo: "LIBRO DE COMPRAS", subtitulos: [rango(desde, hasta)], membrete: membrete(emp),
     columnas: [columna("Tipo Doc.", 0.8), columna("Cuenta", 0.8, "c"), columna("N° Documento", 1, "m"),

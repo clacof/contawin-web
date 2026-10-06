@@ -19,12 +19,12 @@ export default async function Tablero() {
       </div>
     );
   }
-  const db = getDb();
-  const lista = db.asientos(s.periodo.id);
+  const db = await getDb();
+  const lista = await db.asientos(s.periodo.id);
   const debe = lista.reduce((t, a) => t + a.debe, 0);
   const haber = lista.reduce((t, a) => t + a.haber, 0);
   const descuadrados = lista.filter((a) => a.debe !== a.haber).length;
-  const [d, h] = db.rangoFechas(s.periodo.id);
+  const [d, h] = await db.rangoFechas(s.periodo.id);
   const ultimos = [...lista].sort((a, b) => b.numero - a.numero).slice(0, 8);
   return (
     <>

@@ -2,7 +2,7 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   // módulos nativos / con archivos de datos: se cargan desde node_modules en el servidor
-  serverExternalPackages: ["better-sqlite3", "pdfkit", "exceljs"],
+  serverExternalPackages: ["@libsql/client", "libsql", "pdfkit", "exceljs"],
   poweredByHeader: false,
   // En desarrollo, Next solo acepta el recargado en vivo (HMR) desde localhost. Para abrirlo desde otro
   // equipo de la red (ej. http://192.168.1.122:3000) se autorizan esas IP; se pueden agregar más en

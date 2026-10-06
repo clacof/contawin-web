@@ -7,5 +7,5 @@ export const metadata: Metadata = { title: "Nuevo comprobante" };
 
 export default async function Pagina() {
   const s = await requiereEmpresa();
-  return <Editor d={datosEditor(s, null)} />;
+  return <Editor d={await datosEditor(s, null)} />;
 }

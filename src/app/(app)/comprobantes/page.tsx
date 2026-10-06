@@ -11,10 +11,13 @@ export default async function Pagina({ searchParams }: { searchParams: Promise<{
   const s = await requiereEmpresa();
   const q = await searchParams;
   const orden = ["numero", "fecha", "tipo"].includes(q.orden ?? "") ? q.orden! : "numero";
-  const db = getDb();
-  const filas = db.asientos(s.periodoId, orden).map((a) => {
-    const lineas = db.detalleAsiento(a.id);
-    const det = lineas.map((l) => `   ${util.formatoCodigo(l.codigo)}  ${db.nombreCuenta(s.empresaId, l.codigo).slice(0, 28).padEnd(28)}` +
+  const db = await getDb();
+  const [asientos, detalles, cuentas] = await Promise.all([
+    db.asientos(s.periodoId, orden), db.detallesPeriodo(s.periodoId), db.cuentas(s.empresaId)]);
+  const nombres = Object.fromEntries(cuentas.map((c) => [c.codigo, c.nombre]));
+  const filas = asientos.map((a) => {
+    const lineas = detalles.get(a.id) ?? [];
+    const det = lineas.map((l) => `   ${util.formatoCodigo(l.codigo)}  ${(nombres[l.codigo] ?? "").slice(0, 28).padEnd(28)}` +
       `  D ${util.fmtMonto(l.debe).padStart(12)}  H ${util.fmtMonto(l.haber).padStart(12)}`).join("\n");
     return {
       clave: String(a.id),

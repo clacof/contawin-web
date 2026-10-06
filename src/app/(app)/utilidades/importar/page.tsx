@@ -10,5 +10,5 @@ export const metadata: Metadata = { title: "Importar datos DBF" };
 export default async function Pagina() {
   await requiereUsuario();
   const inicial = (await cookies()).get("contawin_dbf")?.value || config.carpetaDbf;
-  return <Importar inicial={inicial} hayEmpresas={getDb().empresas().length > 0} />;
+  return <Importar inicial={inicial} hayEmpresas={(await (await getDb()).empresas()).length > 0} />;
 }

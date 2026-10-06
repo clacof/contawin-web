@@ -21,16 +21,16 @@ export interface Balance8 {
   sumas: Partial<Record<Clave, number>>;
 }
 
-export function calcularBalance8(db: Database, empresaId: number, periodoId: number, desde: util.FechaEntrada,
-  hasta: util.FechaEntrada): Balance8 {
+export async function calcularBalance8(db: Database, empresaId: number, periodoId: number, desde: util.FechaEntrada,
+  hasta: util.FechaEntrada): Promise<Balance8> {
   const filas: FilaBalance[] = [];
   const tot: Partial<Record<Clave, number>> = {};      // defaultdict(int)
   const sums: Record<string, [number, number]> = {};
-  for (const r of db.q<{ codigo: string; d: number; h: number }>(
+  for (const r of await db.q<{ codigo: string; d: number; h: number }>(
     `SELECT d.codigo, SUM(d.debe) d, SUM(d.haber) h FROM detalle d JOIN asiento a ON a.id=d.asiento_id
            WHERE a.periodo_id=? AND a.fecha>=? AND a.fecha<=? GROUP BY d.codigo`,
     [periodoId, util.toIso(desde), util.toIso(hasta)])) sums[r.codigo] = [r.d, r.h];
-  const nombres = Object.fromEntries(db.cuentas(empresaId).map((c) => [c.codigo, c.nombre]));
+  const nombres = Object.fromEntries((await db.cuentas(empresaId)).map((c) => [c.codigo, c.nombre]));
   for (const codigo of Object.keys(sums).sort()) {
     const [deb, cre] = sums[codigo];
     const dif = deb - cre;
@@ -57,10 +57,10 @@ export function calcularBalance8(db: Database, empresaId: number, periodoId: num
   return { filas, totales: { ...tot }, resultado: res, es_ganancia: esGanancia, sumas };
 }
 
-export function balance8Columnas(db: Database, empresaId: number, periodoId: number, desde: util.FechaEntrada,
-  hasta: util.FechaEntrada, emision: string | null = null): Informe {
-  const emp = db.empresa(empresaId)!;
-  const b = calcularBalance8(db, empresaId, periodoId, desde, hasta);
+export async function balance8Columnas(db: Database, empresaId: number, periodoId: number, desde: util.FechaEntrada,
+  hasta: util.FechaEntrada, emision: string | null = null): Promise<Informe> {
+  const emp = (await db.empresa(empresaId))!;
+  const b = await calcularBalance8(db, empresaId, periodoId, desde, hasta);
   const inf = informe({
     titulo: "B A L A N C E    G E N E R A L",
     subtitulos: [`Ejercicio  DESDE : ${util.fmtFecha(desde)}   HASTA : ${util.fmtFecha(hasta)}`],
@@ -88,11 +88,11 @@ export function balance8Columnas(db: Database, empresaId: number, periodoId: num
  * Saldo de cada cuenta desde el inicio del año hasta la fecha, agrupado por el primer
  * dígito del código. Grupo 1: Debe - Haber; resto: Haber - Debe.
  */
-export function balanceTipoInforme(db: Database, empresaId: number, periodoId: number, hasta: util.FechaEntrada,
-  emision: string | null = null): Informe {
-  const emp = db.empresa(empresaId)!;
+export async function balanceTipoInforme(db: Database, empresaId: number, periodoId: number, hasta: util.FechaEntrada,
+  emision: string | null = null): Promise<Informe> {
+  const emp = (await db.empresa(empresaId))!;
   const sums: Record<string, [number, number]> = {};
-  for (const r of db.q<{ codigo: string; d: number; h: number }>(
+  for (const r of await db.q<{ codigo: string; d: number; h: number }>(
     `SELECT d.codigo, SUM(d.debe) d, SUM(d.haber) h FROM detalle d JOIN asiento a ON a.id=d.asiento_id
            WHERE a.periodo_id=? AND a.fecha<=? GROUP BY d.codigo`, [periodoId, util.toIso(hasta)])) sums[r.codigo] = [r.d, r.h];
   const inf = informe({
@@ -102,7 +102,7 @@ export function balanceTipoInforme(db: Database, empresaId: number, periodoId: n
     fechaEmision: emision || util.hoyIso(), nombreArchivo: "balance_tipo_informe",
   });
   let grupoActual: string | null = null, sub = 0, subTiene = false;
-  for (const c of db.cuentas(empresaId)) {
+  for (const c of await db.cuentas(empresaId)) {
     const [d, h] = sums[c.codigo] ?? [0, 0];
     const g = c.codigo.slice(0, 1);
     if (grupoActual !== null && g !== grupoActual && subTiene) inf.filas.push(fila(["", "", "", sub], SUBTOTAL));

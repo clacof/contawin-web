@@ -13,7 +13,7 @@ export async function GET(req: Request) {
   const s = await getSesion();
   if (!s) return new Response("No autorizado", { status: 401 });
   const q = Object.fromEntries(new URL(req.url).searchParams);
-  const r = generar(s, q.tipo ?? "", q);
+  const r = await generar(s, q.tipo ?? "", q);
   if ("error" in r) return new Response(r.error, { status: 400, headers: { "content-type": "text/plain; charset=utf-8" } });
   const inf = r.informe;
   const nombre = inf.nombreArchivo || "informe";

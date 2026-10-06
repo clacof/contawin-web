@@ -14,7 +14,7 @@ export async function ingresar(_prev: EstadoLogin | undefined, form: FormData): 
     return { error: "Acceso no autorizado.\n\nSe superó el número de intentos.", bloqueado: true, restantes: 0 };
   const usuario = String(form.get("usuario") ?? "");
   const clave = String(form.get("clave") ?? "");
-  const u = getDb().login(usuario, clave);
+  const u = await (await getDb()).login(usuario, clave);
   if (!u) {
     intentos += 1;
     await guardarIntentos(intentos);

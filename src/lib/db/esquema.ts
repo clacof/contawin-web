@@ -115,3 +115,30 @@ export const USUARIOS_INICIALES: ReadonlyArray<readonly [string, string, string,
   ["CAC", "CLAUDIO COFRE V", "CAC", true],
   ["CONTA", "CONTABILIDAD", "CONTA", false],
 ];
+
+/**
+ * Borrado en cascada con triggers (solo en la versión web). Con Turso cada consulta remota va por su propia
+ * conexión y `PRAGMA foreign_keys` no se mantiene, así que los ON DELETE CASCADE del esquema no siempre se
+ * aplican; estos triggers hacen lo mismo siempre. Si las claves foráneas sí están activas no hacen nada extra.
+ */
+export const CASCADAS = `
+CREATE TRIGGER IF NOT EXISTS cascada_empresa AFTER DELETE ON empresa BEGIN
+    DELETE FROM periodo   WHERE empresa_id=OLD.id;
+    DELETE FROM cuenta    WHERE empresa_id=OLD.id;
+    DELETE FROM ccosto    WHERE empresa_id=OLD.id;
+    DELETE FROM proveedor WHERE empresa_id=OLD.id;
+END;
+CREATE TRIGGER IF NOT EXISTS cascada_periodo AFTER DELETE ON periodo BEGIN
+    DELETE FROM asiento WHERE periodo_id=OLD.id;
+END;
+CREATE TRIGGER IF NOT EXISTS cascada_asiento AFTER DELETE ON asiento BEGIN
+    DELETE FROM detalle WHERE asiento_id=OLD.id;
+END;
+CREATE TRIGGER IF NOT EXISTS cascada_detalle AFTER DELETE ON detalle BEGIN
+    DELETE FROM compra WHERE detalle_id=OLD.id;
+END;
+`;
+
+/** Tablas en orden de dependencia (para copiar la base completa: respaldo y traspaso a Turso). */
+export const TABLAS = ["empresa", "periodo", "cuenta", "ccosto", "proveedor", "asiento", "detalle", "compra",
+  "usuario", "parametro"] as const;
