@@ -5,12 +5,13 @@ import { useEffect, useState } from "react";
 import { Combo, FechaInput } from "@/components/Campos";
 import { Icono } from "@/components/Icono";
 import { PaginaCabeza } from "@/components/Pagina";
+import { MODOS_BALANCE } from "@/lib/reports/balances";
 import * as util from "@/lib/util";
 
 const TODOS = "__todos";
 
 export default function Parametros({ titulo, subtitulo, cfg, valores, cuentas, ccostos, error, sinDatos }: {
-  titulo: string; subtitulo: string; cfg: { sinDesde?: boolean; tipo?: boolean; cuentas?: boolean; ccosto?: boolean };
+  titulo: string; subtitulo: string; cfg: { sinDesde?: boolean; tipo?: boolean; cuentas?: boolean; ccosto?: boolean; modo?: boolean };
   valores: Record<string, string>; cuentas: [string, string][]; ccostos: [string, string][]; error?: string; sinDatos: boolean;
 }) {
   const router = useRouter();
@@ -31,6 +32,7 @@ export default function Parametros({ titulo, subtitulo, cfg, valores, cuentas, c
     if (cfg.tipo) q.set("tipo", v.tipo);
     if (cfg.cuentas) { q.set("cdesde", v.cdesde); q.set("chasta", v.chasta); }
     if (cfg.ccosto) q.set("cc", v.cc);
+    if (cfg.modo) q.set("modo", v.modo);
     router.push(`${ruta}?${q}`);
   }
 
@@ -44,6 +46,14 @@ export default function Parametros({ titulo, subtitulo, cfg, valores, cuentas, c
               <label className="etiqueta" htmlFor="i-tipo">Tipo de asiento</label>
               <select id="i-tipo" className="control" value={v.tipo} onChange={(e) => c("tipo")(e.target.value)}>
                 {Object.entries(util.TIPOS_ASIENTO).map(([t, n]) => <option key={t} value={t}>{t} - {n}</option>)}
+              </select>
+            </div>
+          )}
+          {cfg.modo && (
+            <div className="campo-grupo">
+              <label className="etiqueta" htmlFor="i-modo">Tipo de balance</label>
+              <select id="i-modo" className="control" value={v.modo} onChange={(e) => c("modo")(e.target.value)}>
+                {Object.entries(MODOS_BALANCE).map(([m, n]) => <option key={m} value={m}>{n}</option>)}
               </select>
             </div>
           )}

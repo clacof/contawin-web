@@ -8,6 +8,7 @@
  */
 export * from "./modelo";
 export { comprobante, libroDiario, libroMayor, saldoTxt } from "./libros";
-export { TEXTO_ART100, balance8Columnas, balanceTipoInforme, calcularBalance8 } from "./balances";
+export { MODOS_BALANCE, TEXTO_ART100, balance8Columnas, balanceTipoInforme, calcularBalance8, modoBalance } from "./balances";
+export type { ModoBalance } from "./balances";
 export { libroCompras, netoIvaTotal } from "./compras";
 export { listadoCcostos, listadoCuentas, listadoEmpresas, listadoProveedores } from "./listados";

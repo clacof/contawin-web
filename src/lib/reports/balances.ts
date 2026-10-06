@@ -10,6 +10,25 @@ export const TEXTO_ART100 = [
   "proporcionado.",
 ];
 
+/**
+ * Modo del balance:
+ *  - "borrador": primera columna con el código de cuenta (uso interno / revisión).
+ *  - "tributario": primera columna con un correlativo 1, 2, 3… en vez del código, para
+ *    presentar a terceros (bancos, etc.) sin exponer el plan de cuentas.
+ */
+export type ModoBalance = "borrador" | "tributario";
+export const MODOS_BALANCE: Record<ModoBalance, string> = {
+  borrador: "Borrador (con códigos de cuenta)",
+  tributario: "Tributario (correlativo, sin códigos)",
+};
+export function modoBalance(v: string | null | undefined): ModoBalance {
+  return v === "tributario" ? "tributario" : "borrador";
+}
+/** Columna identificadora según el modo: código de cuenta o N° correlativo. */
+function columnaId(modo: ModoBalance, titulo: string, ancho: number) {
+  return modo === "tributario" ? columna("N°", ancho * 0.6, "t", { alinear: "C" }) : columna(titulo, ancho, "c");
+}
+
 const CLAVES = ["debitos", "creditos", "deudor", "acreedor", "activo", "pasivo", "perdida", "ganancia"] as const;
 type Clave = (typeof CLAVES)[number];
 export interface FilaBalance extends Record<Clave, number> { codigo: string; nombre: string }
@@ -58,7 +77,7 @@ export async function calcularBalance8(db: Database, empresaId: number, periodoI
 }
 
 export async function balance8Columnas(db: Database, empresaId: number, periodoId: number, desde: util.FechaEntrada,
-  hasta: util.FechaEntrada, emision: string | null = null): Promise<Informe> {
+  hasta: util.FechaEntrada, emision: string | null = null, modo: ModoBalance = "borrador"): Promise<Informe> {
   const emp = (await db.empresa(empresaId))!;
   const b = await calcularBalance8(db, empresaId, periodoId, desde, hasta);
   const inf = informe({
@@ -68,12 +87,13 @@ export async function balance8Columnas(db: Database, empresaId: number, periodoI
       `Dirección : ${emp.direccion}`, `Ciudad    : ${emp.ciudad}`, `Giro      : ${emp.giro}`,
       "S A L D O S  (Deudor / Acreedor)  ·  I N V E N T A R I O  (Activo / Pasivo)  ·  " +
       "R E S U L T A D O  (Pérdida / Ganancia)"],
-    columnas: [columna("CÓDIGO", 0.9, "c"), columna("C U E N T A", 2.4),
+    columnas: [columnaId(modo, "CÓDIGO", 0.9), columna("C U E N T A", modo === "tributario" ? 2.76 : 2.4),
       ...["DÉBITOS", "CRÉDITOS", "DEUDOR", "ACREEDOR", "ACTIVO", "PASIVO", "PÉRDIDA", "GANANCIA"].map((t) => columna(t, 1.15, "m"))],
-    horizontal: true, fechaEmision: emision || util.hoyIso(), nombreArchivo: "balance_8_columnas",
+    horizontal: true, fechaEmision: emision || util.hoyIso(), nombreArchivo: modo === "tributario" ? "balance_8_columnas_tributario" : "balance_8_columnas",
     pie: TEXTO_ART100, firmas: ["CONTADOR", "CONTRIBUYENTE O REPRESENTANTE LEGAL"],
   });
-  for (const f of b.filas) inf.filas.push(fila([f.codigo, f.nombre, ...CLAVES.map((k) => f[k])]));
+  b.filas.forEach((f, i) => inf.filas.push(fila([modo === "tributario" ? String(i + 1) : f.codigo, f.nombre,
+    ...CLAVES.map((k) => f[k])])));
   const t = b.totales;
   inf.filas.push(fila(["", "T O T A L E S", ...CLAVES.map((k) => t[k] ?? 0)], TOTAL));
   const r = b.resultado;
@@ -89,7 +109,7 @@ export async function balance8Columnas(db: Database, empresaId: number, periodoI
  * dígito del código. Grupo 1: Debe - Haber; resto: Haber - Debe.
  */
 export async function balanceTipoInforme(db: Database, empresaId: number, periodoId: number, hasta: util.FechaEntrada,
-  emision: string | null = null): Promise<Informe> {
+  emision: string | null = null, modo: ModoBalance = "borrador"): Promise<Informe> {
   const emp = (await db.empresa(empresaId))!;
   const sums: Record<string, [number, number]> = {};
   for (const r of await db.q<{ codigo: string; d: number; h: number }>(
@@ -98,10 +118,10 @@ export async function balanceTipoInforme(db: Database, empresaId: number, period
   const inf = informe({
     titulo: `BALANCE TIPO INFORME   HASTA EL < ${util.fmtFecha(hasta)} >`, subtitulos: [emp.razon_social],
     membrete: membrete(emp),
-    columnas: [columna("Código", 1, "c"), columna("Cuenta", 4), columna("S a l d o", 1.6, "m"), columna("SubTotal", 1.6, "m")],
-    fechaEmision: emision || util.hoyIso(), nombreArchivo: "balance_tipo_informe",
+    columnas: [columnaId(modo, "Código", 1), columna("Cuenta", modo === "tributario" ? 4.4 : 4), columna("S a l d o", 1.6, "m"), columna("SubTotal", 1.6, "m")],
+    fechaEmision: emision || util.hoyIso(), nombreArchivo: modo === "tributario" ? "balance_tipo_informe_tributario" : "balance_tipo_informe",
   });
-  let grupoActual: string | null = null, sub = 0, subTiene = false;
+  let grupoActual: string | null = null, sub = 0, subTiene = false, n = 0;
   for (const c of await db.cuentas(empresaId)) {
     const [d, h] = sums[c.codigo] ?? [0, 0];
     const g = c.codigo.slice(0, 1);
@@ -109,7 +129,7 @@ export async function balanceTipoInforme(db: Database, empresaId: number, period
     if (g !== grupoActual) { grupoActual = g; sub = 0; subTiene = false; }
     const total = g === "1" ? d - h : h - d;
     if (total !== 0) {
-      inf.filas.push(fila([c.codigo, c.nombre, total, ""]));
+      inf.filas.push(fila([modo === "tributario" ? String(++n) : c.codigo, c.nombre, total, ""]));
       sub += total;
       subTiene = true;
     }

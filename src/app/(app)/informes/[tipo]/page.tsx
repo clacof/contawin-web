@@ -19,7 +19,7 @@ export default async function PaginaInforme({ params, searchParams }: {
 }) {
   const tipo = (await params).tipo;
   if (!(tipo in INFORMES)) notFound();
-  const cfg = INFORMES[tipo as TipoInforme] as { titulo: string; sinDesde?: boolean; tipo?: boolean; cuentas?: boolean; ccosto?: boolean };
+  const cfg = INFORMES[tipo as TipoInforme] as { titulo: string; sinDesde?: boolean; tipo?: boolean; cuentas?: boolean; ccosto?: boolean; modo?: boolean };
   const s = await requiereEmpresa();
   const q = await searchParams;
   const db = await getDb();
@@ -29,6 +29,7 @@ export default async function PaginaInforme({ params, searchParams }: {
   const valores = {
     desde: q.desde ?? d ?? `${s.ano}-01-01`, hasta: q.hasta ?? h ?? `${s.ano}-12-31`, emision: q.emision ?? util.hoyIso(),
     tipo: q.tipo ?? "I", cdesde: q.cdesde ?? cuentas[0]?.[0] ?? "", chasta: q.chasta ?? cuentas.at(-1)?.[0] ?? "", cc: q.cc ?? TODOS_CC,
+    modo: reports.modoBalance(q.modo),
   };
 
   let visor: React.ReactNode = null;

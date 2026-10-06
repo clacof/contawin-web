@@ -9,13 +9,13 @@ import type { Sesion } from "./sesion";
 import * as util from "./util";
 
 export const INFORMES = {
-  "balance-8": { titulo: "Balance de 8 columnas" },
-  "balance-tipo-informe": { titulo: "Balance tipo informe", sinDesde: true },
+  "balance-8": { titulo: "Balance de 8 columnas", modo: true },
+  "balance-tipo-informe": { titulo: "Balance tipo informe", sinDesde: true, modo: true },
   "libro-diario": { titulo: "Libro diario" },
   "libro-diario-tipo": { titulo: "Libro diario por tipo", tipo: true },
   "libro-mayor": { titulo: "Movimientos de mayor", cuentas: true },
   "libro-compras": { titulo: "Libro de compras", ccosto: true },
-} as const satisfies Record<string, { titulo: string; sinDesde?: boolean; tipo?: boolean; cuentas?: boolean; ccosto?: boolean }>;
+} as const satisfies Record<string, { titulo: string; sinDesde?: boolean; tipo?: boolean; cuentas?: boolean; ccosto?: boolean; modo?: boolean }>;
 export type TipoInforme = keyof typeof INFORMES;
 
 export type Parametros = Record<string, string | undefined>;
@@ -58,8 +58,8 @@ export async function generar(s: Sesion, tipo: string, p: Parametros): Promise<R
       const [d, h] = [p.cdesde, p.chasta].sort();
       return { informe: await reports.libroMayor(db, e, per, desde, hasta, d, h, emision) };
     }
-    case "balance-8": return { informe: await reports.balance8Columnas(db, e, per, desde, hasta, emision) };
-    case "balance-tipo-informe": return { informe: await reports.balanceTipoInforme(db, e, per, hasta, emision) };
+    case "balance-8": return { informe: await reports.balance8Columnas(db, e, per, desde, hasta, emision, reports.modoBalance(p.modo)) };
+    case "balance-tipo-informe": return { informe: await reports.balanceTipoInforme(db, e, per, hasta, emision, reports.modoBalance(p.modo)) };
     case "libro-compras": {
       const cc = p.cc === undefined || p.cc === TODOS_CC ? null : p.cc;
       return { informe: await reports.libroCompras(db, e, per, desde, hasta, cc, emision) };

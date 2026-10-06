@@ -101,6 +101,24 @@ describe("contabilidad", () => {
     expect(b.resultado.perdida).toBe(381000);
   });
 
+  it("balance tributario: correlativo en vez de código", async () => {
+    await asientos();
+    for (const [borr, trib] of [
+      await Promise.all([reports.balance8Columnas(db, emp, per, "2026-01-01", "2026-12-31"),
+        reports.balance8Columnas(db, emp, per, "2026-01-01", "2026-12-31", null, "tributario")]),
+      await Promise.all([reports.balanceTipoInforme(db, emp, per, "2026-12-31"),
+        reports.balanceTipoInforme(db, emp, per, "2026-12-31", null, "tributario")]),
+    ]) {
+      expect(trib.columnas[0].titulo).toBe("N°");
+      expect(trib.filas.length).toBe(borr.filas.length);
+      const cuentas = (inf: typeof trib) => inf.filas.filter((f) => f.estilo === reports.NORMAL);
+      expect(cuentas(trib).map((f) => f.valores[0])).toEqual(cuentas(trib).map((_, i) => String(i + 1)));
+      expect(cuentas(trib).map((f) => f.valores.slice(1))).toEqual(cuentas(borr).map((f) => f.valores.slice(1)));
+      const texto = trib.filas.flatMap((f) => reports.textos(trib, f)).join("|");
+      for (const f of cuentas(borr)) expect(texto).not.toContain(reports.textos(borr, f)[0]);
+    }
+  });
+
   it("informes y exportación", async () => {
     await asientos();
     const a = (await db.asientos(per))[1];
@@ -111,6 +129,8 @@ describe("contabilidad", () => {
       reports.libroMayor(db, emp, per, "2026-02-01", "2026-12-31"),
       reports.balance8Columnas(db, emp, per, "2026-01-01", "2026-12-31"),
       reports.balanceTipoInforme(db, emp, per, "2026-12-31"),
+      reports.balance8Columnas(db, emp, per, "2026-01-01", "2026-12-31", null, "tributario"),
+      reports.balanceTipoInforme(db, emp, per, "2026-12-31", null, "tributario"),
       reports.libroCompras(db, emp, per, "2026-01-01", "2026-12-31"),
       reports.listadoEmpresas(db), reports.listadoCuentas(db, emp), reports.listadoCcostos(db, emp), reports.listadoProveedores(db, emp),
     ])) {
